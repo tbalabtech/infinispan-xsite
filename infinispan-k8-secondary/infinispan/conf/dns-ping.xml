@@ -1,0 +1,15 @@
+<!-- <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://www.jgroups.org/schema/JGroups-4.0.xsd">
+  <TCP bind_port="7800"/>
+  <DNS_PING dns_query="infinispan-headless.identity-local.svc.cluster.local" async_discovery="true"/>
+  <MERGE3/>
+  <FD_SOCK/>
+  <FD_ALL/>
+  <VERIFY_SUSPECT/>
+  <NAKACK2/>
+  <UNICAST3/>
+  <STABLE/>
+  <GMS/>
+  <MFC/>
+  <FRAG3/>
+</config> -->

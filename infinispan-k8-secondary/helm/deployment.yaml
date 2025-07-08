@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: infinispan
+  namespace: secondary
+spec:
+  replicas: 3
+  serviceName: infinispan-headless
+  selector:
+    matchLabels:
+      app: infinispan
+  template:
+    metadata:
+      labels:
+        app: infinispan
+    spec:
+      containers:
+      - name: infinispan
+        image: infinispan-secondary:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 11222
+          protocol: TCP
+          name: hotrod
+        - containerPort: 7900
+          protocol: TCP
+          name: xsite
+        - containerPort: 7800
+          protocol: TCP
+          name: jgroups
+        - containerPort: 8080
+          protocol: TCP
+          name: management
+        env:
+        - name: USER
+          value: "admin"
+        - name: PASS
+          value: "admin"
+        - name: JGROUPS_DISCOVERY_PROTOCOL
+          value: "dns.DNS_PING"
+        - name: DNS_QUERY
+          value: "infinispan-headless.secondary.svc.cluster.local"
+        - name: jgroups.dns.query
+          value: "infinispan-headless.secondary.svc.cluster.local"
+        - name: KUBERNETES_NAMESPACE
+          value: "secondary"
+        - name: IDENTITIES_BATCH
+          value: /opt/infinispan/server/conf/identities.batch
+        - name: infinispan.site.name
+          value: "globalSiteSecondary"
+        - name: infinispan.cluster.name
+          value: "globalCluster"
+        - name: infinispan.bind.address
+          value: "0.0.0.0"
+        - name: infinispan.bind.port
+          value: "11222"
+        - name: JAVA_OPTS
+          value: "-Xms1g -Xmx2g -Djava.net.preferIPv4Stack=true -Dinfinispan.site.name=globalSiteSecondary -Dinfinispan.cluster.name=globalCluster -Djgroups.bind_addr=0.0.0.0 -Dinfinispan.xsite.globalSitePrimary.address=infinispan-xsite.primary.svc.cluster.local -Dinfinispan.xsite.globalSitePrimary.port=7800 -Djgroups.logging.log_level=DEBUG -Dorg.jgroups.protocols.relay.RELAY2.level=DEBUG"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinispan
+  namespace: secondary
+spec:
+  ports:
+  - port: 11222
+    targetPort: 11222
+    nodePort: 30223
+  selector:
+    app: infinispan
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinispan-headless
+  namespace: secondary
+spec:
+  clusterIP: None
+  selector:
+    app: infinispan
+  ports:
+    - port: 11222
+      targetPort: 11222
+      name: hotrod
+    - port: 7800
+      targetPort: 7800
+      name: jgroups
+    - port: 7900
+      targetPort: 7900
+      name: xsite
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinispan-xsite
+  namespace: secondary
+spec:
+  type: NodePort
+  selector:
+    app: infinispan
+  ports:
+    - port: 7800
+      targetPort: 7800
+      nodePort: 30901

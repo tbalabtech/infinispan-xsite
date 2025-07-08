@@ -1,0 +1,108 @@
+# infinispan.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: infinispan
+  namespace: identity-local
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: infinispan
+  template:
+    metadata:
+      labels:
+        app: infinispan
+    spec:
+      containers:
+      - name: infinispan
+        image: infinispan-custom:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 11222
+          protocol: TCP
+          name: hotrod
+        - containerPort: 7900
+          protocol: TCP
+          name: xsite
+        - containerPort: 7800
+          protocol: TCP
+          name: jgroups
+        - containerPort: 8080
+          protocol: TCP
+          name: management
+        env:
+        - name: USER
+          value: "admin"
+        - name: PASS
+          value: "admin"
+        - name: JGROUPS_DISCOVERY_PROTOCOL
+          value: "dns.DNS_PING"
+        - name: DNS_QUERY
+          value: "infinispan-headless.identity.svc.cluster.local"
+        - name: jgroups.dns.query
+          value: "infinispan-headless.identity.svc.cluster.local"
+        - name: KUBERNETES_NAMESPACE
+          value: "identity-local"
+        - name: IDENTITIES_BATCH
+          value: /opt/infinispan/server/conf/identities.batch
+        - name: infinispan.site.name
+          value: "globalSitePrimary"
+        - name: infinispan.cluster.name
+          value: "globalCluster"
+        - name: infinispan.bind.address
+          value: "0.0.0.0"
+        - name: infinispan.bind.port
+          value: "11222"
+        # - name: POD_IP
+        #   valueFrom:
+        #     fieldRef:
+        #       fieldPath: status.podIP
+        - name: JAVA_OPTS
+          value: "-Xms1g -Xmx2g -Dinfinispan.site.name=globalSitePrimary -Dinfinispan.cluster.name=globalCluster -Djgroups.bind_addr=0.0.0.0 -Djgroups.external_addr=10.244.0.26"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinispan
+  namespace: identity-local
+spec:
+  ports:
+  - port: 11222
+    targetPort: 11222
+  selector:
+    app: infinispan
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinispan-headless
+  namespace: identity-local
+spec:
+  clusterIP: None
+  selector:
+    app: infinispan
+  ports:
+    - port: 11222
+      targetPort: 11222
+      name: hotrod
+    - port: 7800
+      targetPort: 7800
+      name: jgroups
+    - port: 7900
+      targetPort: 7900
+      name: xsite
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinispan-xsite
+  namespace: identity-local
+spec:
+  type: LoadBalancer
+  selector:
+    app: infinispan
+  ports:
+    - port: 7900
+      targetPort: 7900
+      name: xsite

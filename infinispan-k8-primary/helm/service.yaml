@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinispan
+  namespace: identity-local
+spec:
+  type: ClusterIP
+  ports:
+    - port: 11222
+      targetPort: 11222
+      name: hotrod
+  selector:
+    app: infinispan

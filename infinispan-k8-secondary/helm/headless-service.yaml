@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinispan-headless
+  namespace: identity-local
+spec:
+  clusterIP: None
+  selector:
+    app: infinispan
+  ports:
+    - port: 11222
+      targetPort: 11222
+      name: hotrod
+    - port: 7800
+      targetPort: 7800
+      name: jgroups

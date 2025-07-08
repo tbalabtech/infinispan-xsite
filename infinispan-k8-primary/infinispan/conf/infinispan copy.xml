@@ -1,0 +1,205 @@
+<infinispan
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="urn:infinispan:config:14.0 https://infinispan.org/schemas/infinispan-config-14.0.xsd
+                            urn:infinispan:server:14.0 https://infinispan.org/schemas/infinispan-server-14.0.xsd"
+      xmlns="urn:infinispan:config:14.0"
+      xmlns:server="urn:infinispan:server:14.0">
+      
+
+   <!-- JGroups stack configuration for cross-site -->
+    <jgroups xmlns="urn:infinispan:config:jgroups:14.0">
+
+        <!-- <stack name="relay-tcp" extends="tcp">
+            <TCPPING initial_hosts="infinispan-headless.identity-local.svc.cluster.local[11222], 10.96.78.14[7900], 10.96.78.14[11222],172.20.0.2[11222], 172.20.0.2[11223], 172.20.0.2[30222], 172.20.0.2[30900], 172.20.0.2[7900], 172.20.0.2[7800]" />
+        </stack> -->
+
+        <stack name="relay-tcp" extends="tcp">
+            <TCP bind_addr="${jgroups.bind.address:0.0.0.0}"
+                 bind_port="7800"
+                 recv_buf_size="20m"
+                 send_buf_size="640k"/>
+            <TCPPING initial_hosts="infinispan-xsite.secondary.svc.cluster.local[7800]"
+                     port_range="10"
+                     timeout="5000"/>
+            <MERGE3/>
+            <FD_SOCK/>
+            <FD_ALL timeout="30000" interval="5000"/>
+            <VERIFY_SUSPECT timeout="1500"/>
+            <pbcast.NAKACK2/>
+            <UNICAST3/>
+            <pbcast.STABLE/>
+            <pbcast.GMS print_local_addr="true" join_timeout="7000"/>
+            <MFC/>
+            <FRAG3/>
+        </stack>
+
+        <stack name="xsite" extends="kubernetes">
+            <relay.RELAY2 xmlns="urn:org:jgroups" site="globalSitePrimary" can_become_site_master="true" max_site_masters="3"/>
+            <remote-sites default-stack="relay-tcp">
+                <remote-site name="globalSitePrimary" />              
+                <remote-site name="globalSiteSecondary"/>
+            </remote-sites>
+        </stack>
+
+    </jgroups>
+
+   <cache-container name="remoteKeycloak" statistics="true">
+      <transport cluster="${infinispan.cluster.name:globalCluster}" node-name="${infinispan.node.name:}" site="globalSitePrimary" stack="xsite"/>
+      <security>
+         <authorization/>
+      </security>
+      
+      <serialization marshaller="org.infinispan.jboss.marshalling.commons.GenericJBossMarshaller">
+            <allow-list>
+                <class>org.keycloak.cluster.infinispan.WrapperClusterEvent</class>
+                <regex>.*</regex>
+            </allow-list>
+        </serialization>
+
+    <replicated-cache name="work">
+    	<encoding media-type="application/x-jboss-marshalling"/>
+       <security>
+         <authorization/>
+      </security>
+    </replicated-cache>
+    
+    
+    <distributed-cache name="sessions" owners="2">
+      <backups>
+         <backup site="globalSiteSecondary" strategy="ASYNC" failure-policy="IGNORE" timeout="15000" enabled="true">
+            <state-transfer chunk-size="1000" timeout="300000"/>
+         </backup>
+      </backups>
+    	<encoding media-type="application/x-jboss-marshalling"/>
+       <security>
+         <authorization/>
+      </security>
+    </distributed-cache>
+    
+    <distributed-cache name="authenticationSessions" owners="2">
+    <backups>
+         <backup site="globalSiteSecondary" strategy="ASYNC" failure-policy="IGNORE" timeout="15000" enabled="true">
+            <state-transfer chunk-size="1000" timeout="300000"/>
+         </backup>
+      </backups>
+    	<encoding media-type="application/x-jboss-marshalling"/>
+       <security>
+         <authorization/>
+      </security>
+    </distributed-cache>
+    
+    <distributed-cache name="clientSessions" owners="2">
+      <backups>
+         <backup site="globalSiteSecondary" strategy="ASYNC" failure-policy="WARN" timeout="10000" enabled="true">
+            <state-transfer chunk-size="512" timeout="240000"/>
+         </backup>
+      </backups>
+    	<encoding media-type="application/x-jboss-marshalling"/>
+       <security>
+         <authorization/>
+      </security>
+    </distributed-cache>
+    
+    <distributed-cache name="offlineSessions" owners="2">
+      <backups>
+         <backup site="globalSiteSecondary" strategy="ASYNC" failure-policy="WARN" timeout="10000" enabled="true">
+            <state-transfer chunk-size="512" timeout="240000"/>
+         </backup>
+      </backups>
+    	<encoding media-type="application/x-jboss-marshalling"/>
+       <security>
+         <authorization/>
+      </security>
+    </distributed-cache>
+    
+    <distributed-cache name="offlineClientSessions" owners="2">
+      <backups>
+         <backup site="globalSiteSecondary" strategy="ASYNC" failure-policy="WARN" timeout="10000" enabled="true">
+            <state-transfer chunk-size="512" timeout="240000"/>
+         </backup>
+      </backups>
+    	<encoding media-type="application/x-jboss-marshalling"/>
+       <security>
+         <authorization/>
+      </security>
+    </distributed-cache>
+    
+    <distributed-cache name="actionTokens" owners="2">
+      <backups>
+         <backup site="globalSiteSecondary" strategy="ASYNC" failure-policy="WARN" timeout="10000" enabled="true">
+            <state-transfer chunk-size="512" timeout="240000"/>
+         </backup>
+      </backups>
+    	<encoding media-type="application/x-jboss-marshalling"/>
+       <security>
+         <authorization/>
+      </security>
+    </distributed-cache>
+    
+    <distributed-cache name="loginFailures" owners="2">
+      <backups>
+         <backup site="globalSiteSecondary" strategy="ASYNC" failure-policy="WARN" timeout="10000" enabled="true">
+            <state-transfer chunk-size="512" timeout="240000"/>
+         </backup>
+      </backups>
+    	<encoding media-type="application/x-jboss-marshalling"/>
+       <security>
+         <authorization/>
+      </security>
+    </distributed-cache>
+   </cache-container>
+
+   <server xmlns="urn:infinispan:server:14.0">
+      <interfaces>
+         <interface name="public">
+            <inet-address value="${infinispan.bind.address:0.0.0.0}"/>
+         </interface>
+      </interfaces>
+
+      <socket-bindings default-interface="public" port-offset="${infinispan.socket.binding.port-offset:0}">
+         <socket-binding name="default" port="${infinispan.bind.port:11222}"/>
+         <socket-binding name="memcached" port="11221"/>
+      </socket-bindings>
+
+      <security>
+         <credential-stores>
+            <credential-store name="credentials" path="credentials.pfx">
+               <clear-text-credential clear-text="secret"/>
+            </credential-store>
+         </credential-stores>
+         <security-realms>
+            <security-realm name="default">
+               <!-- Uncomment to enable TLS on the realm -->
+               <!-- <server-identities>
+                  <ssl>
+                     <keystore path="server.p12"
+                      relative-to="infinispan.server.config.path"
+                      password="secret"
+                      alias="server"
+                      generate-self-signed-certificate-host="localhost"/>
+                  </ssl>
+               </server-identities> -->
+               <properties-realm groups-attribute="Roles">
+                  <user-properties path="users.properties"/>
+                  <group-properties path="groups.properties"/>
+               </properties-realm>
+            </security-realm>
+         </security-realms>
+      </security>
+
+   <endpoints>
+    <endpoint socket-binding="default" security-realm="default">
+      <hotrod-connector name="hotrod">
+         <authentication>
+            <sasl mechanisms="DIGEST-MD5 PLAIN"
+                  server-name="infinispan"
+                  qop="auth"/>
+         </authentication>
+      </hotrod-connector>
+      <rest-connector name="rest">
+         <authentication mechanisms="DIGEST BASIC"/>
+      </rest-connector>
+    </endpoint>
+  </endpoints>
+   </server>
+</infinispan>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RelayConfiguration xmlns="urn:jgroups:relay:1.0">
+    <sites>
+        <site name="globalSitePrimary">
+            <bridges>
+                <bridge config="bridge.xml" name="global"/>
+            </bridges>
+        </site>
+
+        <site name="globalSiteSecondary">
+            <bridges>
+                <bridge config="bridge.xml" name="global"/>
+            </bridges>
+        </site>
+
+    </sites>
+</RelayConfiguration>
+

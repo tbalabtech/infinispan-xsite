@@ -1,0 +1,5 @@
+user create "admin" -p "admin" -g admin
+user create "observer" -p "admin" -g observer
+user create "deployer" -p "admin" -g deployer
+user create "monitor" -p "admin" -g monitor
+user create "application" -p "admin" -g application
